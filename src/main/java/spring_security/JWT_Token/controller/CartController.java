@@ -1,14 +1,10 @@
 package spring_security.JWT_Token.controller;
 
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import spring_security.JWT_Token.dto.CartDTO;
-import spring_security.JWT_Token.entity.CartEntity;
 import spring_security.JWT_Token.service.CartSerice;
 
 import java.util.List;
