@@ -1,7 +1,10 @@
 package spring_security.JWT_Token.service;
 
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
+import org.apache.commons.io.IOUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.BeanUtils;
@@ -25,8 +28,10 @@ import spring_security.JWT_Token.repository.ProductRepository;
 import spring_security.JWT_Token.repository.UserInfoRepository;
 
 import javax.crypto.SecretKey;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -259,18 +264,18 @@ private String formatPhoneNumber(String phoneNumber) {
 //        return cell.getCellType() == CellType.NUMERIC ? cell.getNumericCellValue() : 0;
 //    }
 //
-//    @Transactional
-//    public ProductEntity updateProductDetails(ProductDTO productDTO) throws IOException {
-//        // Retrieve the existing product
-//        ProductEntity existingProduct = productRepository.findById(productDTO.getProductId())
-//                .orElseThrow(() -> new NoSuchElementException("Product not found with id " + productDTO.getProductId()));
-//        BeanUtils.copyProperties(existingProduct, productDTO);
-//        existingProduct.setCreatedAt(new Date());
-//        if (productDTO.getImageData() != null && !productDTO.getImageData().isEmpty()) {
-//            handleImageUpload(productDTO.getImageData(), existingProduct);
-//        }
-//        return productRepository.save(existingProduct);
-//    }
+    @Transactional
+    public ProductEntity updateProductDetails(ProductDTO productDTO) throws IOException {
+        // Retrieve the existing product
+        ProductEntity existingProduct = productRepository.findById(productDTO.getProductId())
+                .orElseThrow(() -> new NoSuchElementException("Product not found with id " + productDTO.getProductId()));
+        BeanUtils.copyProperties(existingProduct, productDTO);
+        existingProduct.setCreatedAt(new Date());
+        if (productDTO.getImageData() != null && !productDTO.getImageData().isEmpty()) {
+            handleImageUpload(productDTO.getImageData(), existingProduct);
+        }
+        return productRepository.save(existingProduct);
+    }
 
     private void handleImageUpload(MultipartFile file, ProductEntity product) throws IOException {
         if (file != null && !file.isEmpty()) {
@@ -341,5 +346,39 @@ private String formatPhoneNumber(String phoneNumber) {
         response.setClothes(clothes);
 
         return response;
+    }
+
+    public String countCharacterFrequency(InputStream inputStream) throws IOException {
+        // StringBuilder to accumulate result
+        StringBuilder sb = new StringBuilder();
+
+        // Guava Multiset to hold character counts
+        Multiset<Character> bagOfChars = HashMultiset.create();
+
+        // Wrap input stream into a reader
+        try (Reader reader = new InputStreamReader(new BufferedInputStream(inputStream), StandardCharsets.UTF_8)) {
+            int characterRead;
+            // Read each character from the input
+            while ((characterRead = reader.read()) != -1) {
+                // Convert character to lowercase and add to Multiset
+                bagOfChars.add((char) Character.toLowerCase(characterRead));
+            }
+        } catch (IOException e) {
+            throw new IOException("Error reading the input stream", e);
+        }
+
+        // Append character counts to the StringBuilder
+        for (char letter = 'a'; letter <= 'z'; letter++) {
+            sb.append(letter).append(": ").append(bagOfChars.count(letter))
+                    .append(System.lineSeparator());
+        }
+
+        return sb.toString();
+    }
+
+    public void writeResultToOutput(WritableByteChannel writeChannel, String result) throws IOException {
+        try (OutputStream outputStream = Channels.newOutputStream(writeChannel)) {
+            IOUtils.write(result, outputStream, StandardCharsets.UTF_8);
+        }
     }
 }

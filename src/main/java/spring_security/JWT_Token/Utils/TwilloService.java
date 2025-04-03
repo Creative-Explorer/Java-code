@@ -56,7 +56,9 @@ public class TwilloService {
 
     public boolean checkVerificationCode(String phoneNumber, String code) {
         try {
-            VerificationCheck verificationCheck = VerificationCheck.creator(verifyServiceSid, code).setTo(formatPhoneNumber(phoneNumber)).create();
+            VerificationCheck verificationCheck =
+                    VerificationCheck.creator(verifyServiceSid, code)
+                            .setTo(formatPhoneNumber(phoneNumber)).create();
             System.out.println(verificationCheck);
             return true;
         } catch (ApiException e) {

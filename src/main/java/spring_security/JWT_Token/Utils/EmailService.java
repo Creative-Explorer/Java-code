@@ -70,7 +70,8 @@ public class EmailService {
         }
     }
 
-    public void sendEmailWithAttachment(String to, String cc, String bcc, String subject, String text, File attachment, File pdfInvoice) {
+    public void sendEmailWithAttachment(String to, String cc, String bcc, String subject,
+                                        String text, File attachment, File pdfInvoice) {
         try {
             MimeMessage mimeMessage = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);

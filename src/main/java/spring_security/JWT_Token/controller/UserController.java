@@ -47,8 +47,9 @@ public class UserController {
 
 
     @PostMapping("/login")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<String> login(@RequestParam String username, @RequestParam String password) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> login(
+            @RequestParam String username, @RequestParam String password) {
         boolean loggedIn = service.login(username, password);
         if (loggedIn) {
             return ResponseEntity.ok("Login successful");
@@ -58,7 +59,7 @@ public class UserController {
     }
 
     @PostMapping("/logout")
-    @CrossOrigin(origins = "http://localhost:4200")
+//
     public ResponseEntity<String> logoutUser(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         String token = null;
@@ -66,7 +67,7 @@ public class UserController {
             token = authHeader.substring(7);
         }
 
-        if (token != null) {
+        if (token != null && !token.isBlank() && !token.isEmpty()) {
             try {
                 blackList.blackListToken(token);
                 return ResponseEntity.ok("You have been logged out successfully");
@@ -79,7 +80,7 @@ public class UserController {
     }
 
     @PostMapping("/encryptPassword")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public String addNewUser(@RequestBody UserInfoDTO userInfo) {
         return service.addUser(userInfo);
     }
@@ -90,7 +91,10 @@ public class UserController {
         if (!phoneNumber.startsWith("+")) {
             phoneNumber = "+" + phoneNumber;
         }
-
+        if (!phoneNumber.endsWith("+")){
+            phoneNumber = "+" + phoneNumber;
+        }
+        phoneNumber = phoneNumber.replace( "\\s+", "");
         Optional<UserInfoEntity> userOptional = userInfoRepository.findByPhoneNumber(phoneNumber);
         if (userOptional.isPresent()) {
             UserInfoEntity userInfo = userOptional.get();
@@ -109,8 +113,9 @@ public class UserController {
     }
 
     @GetMapping("/user-details")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<List<Map<String, String>>> getUserById(@RequestParam("phoneNumber") String phoneNumber) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<Map<String, String>>> getUserById(
+            @RequestParam("phoneNumber") String phoneNumber) {
         phoneNumber = phoneNumber.replaceAll("\\s+", "");
         if (!phoneNumber.startsWith("+")) {
             phoneNumber = "+" + phoneNumber;
@@ -128,7 +133,7 @@ public class UserController {
     }
 
     @GetMapping("/verifyUser")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<String> verifyUser(@RequestParam String phoneNumber) {
         boolean isVerified = service.verifyUser(phoneNumber);
         return isVerified ? ResponseEntity.ok("User is Verified") :
@@ -139,14 +144,16 @@ public class UserController {
     @PreAuthorize("hasAuthority('ROLE_USER')")
     public List<ProductEntity> getUserProducts(HttpServletRequest request) {
         String username = jwtService.extractUsernameFromRequest(request);
-        UserInfoEntity user = userInfoRepository.findByName(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        UserInfoEntity user = userInfoRepository.findByName(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         List<ProductEntity> products = productRepository.findByUserId(user.getId());
-        return products.stream().sorted(Comparator.comparing(ProductEntity::getCreatedAt)).collect(Collectors.toList());
+        return products.stream().sorted(Comparator.comparing(ProductEntity::getCreatedAt))
+                .collect(Collectors.toList());
     }
 
     @PostMapping("/send-otp")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> sendOtp(@RequestParam String phoneNumber) {
         if (twilloService.sendVerificationCode(phoneNumber)) {
             return ResponseEntity.ok("OTP sent successfully");
@@ -156,8 +163,9 @@ public class UserController {
     }
 
     @PostMapping("/verify-otp")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<?> verifyOtp(@RequestParam String phoneNumber, @RequestParam String code) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> verifyOtp(@RequestParam String phoneNumber,
+                                       @RequestParam String code) {
         if (twilloService.checkVerificationCode(phoneNumber, code)) {
             return ResponseEntity.ok("OTP verified successfully");
         } else {
@@ -167,9 +175,10 @@ public class UserController {
 
 
     @PostMapping("/reset-password")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> resetPassword(@RequestBody PasswordResetRequest request) {
-        boolean passwordUpdated = service.updatePassword(request.getPhoneNumber(), request.getNewPassword());
+        boolean passwordUpdated = service.updatePassword(request.getPhoneNumber(),
+                request.getNewPassword());
         if (passwordUpdated) {
             return ResponseEntity.ok("Password updated successfully");
         } else {

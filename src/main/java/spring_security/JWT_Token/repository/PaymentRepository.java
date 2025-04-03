@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import spring_security.JWT_Token.EnumConstants;
-import spring_security.JWT_Token.dto.PaymentDTO;
 import spring_security.JWT_Token.entity.Payment;
 
 import java.util.List;

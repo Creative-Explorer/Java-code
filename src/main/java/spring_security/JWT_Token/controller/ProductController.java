@@ -1,6 +1,8 @@
 package spring_security.JWT_Token.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,16 +34,20 @@ import spring_security.JWT_Token.service.ProductService;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @RestController
 @RequestMapping("/products")
 public class ProductController {
 
+    private static final String VIDEO_DIRECTORY = "D:/";
     @Autowired
     private ProductService service;
     @Autowired
@@ -52,11 +58,21 @@ public class ProductController {
     private AuthenticationManager authenticationManager;
     @Autowired
     private UserInfoRepository userInfoRepository;
-
-    private static final String VIDEO_DIRECTORY = "D:/";
-
     @Autowired
     private VideoRepository videoRepository;
+
+    @PostMapping("/upload")
+    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
+        try {
+            // Convert MultipartFile to InputStream and pass to the service for processing
+            String result = service.countCharacterFrequency(file.getInputStream());
+
+            // Return the result as a response
+            return ResponseEntity.ok(result);
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body("Error processing file: " + e.getMessage());
+        }
+    }
 
     //    @GetMapping("/welcome")
 //    public String welcome() {
@@ -112,47 +128,40 @@ public class ProductController {
 //        }
 //        }
     @GetMapping("/products")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<List<ProductResponse>> getProducts(
-            @RequestParam(value = "phoneNumber", required = false) String phoneNumber) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<List<ProductResponse>> getProducts(@RequestParam(value = "phoneNumber", required = false) String phoneNumber) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        UserInfoEntity user = userInfoRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with phone number: "));
+        UserInfoEntity user = userInfoRepository.findByPhoneNumber(phoneNumber).orElseThrow(() -> new EntityNotFoundException("User not found with phone number: "));
 
         // Fetch all products
         List<ProductEntity> products = productRepository.findAll();
 
         // Create response with enabled/disabled state
-        List<ProductResponse> productResponses = products.stream()
-                .map(product -> {
-                    boolean isDisabled;
-                    String paymentStatus = checkPaymentStatus(product);
+        List<ProductResponse> productResponses = products.stream().map(product -> {
+            boolean isDisabled;
+            String paymentStatus = checkPaymentStatus(product);
 
-                    if (authentication.getAuthorities().stream().anyMatch(grantedAuthority ->
-                            grantedAuthority.getAuthority().equals("ROLE_ADMIN"))) {
-                        // Admin sees all products; no products are disabled
-                        isDisabled = false;
-                    } else {
-                        // Regular user sees only their own products; others are disabled
-                        isDisabled = product.getUser().getId() != user.getId(); // Disable if not owned by the user
-                    }
+            if (authentication.getAuthorities().stream().anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"))) {
+                // Admin sees all products; no products are disabled
+                isDisabled = false;
+            } else {
+                // Regular user sees only their own products; others are disabled
+                isDisabled = product.getUser().getId() != user.getId(); // Disable if not owned by the user
+            }
 
-                    return new ProductResponse(product, isDisabled, paymentStatus);
-                })
-                .collect(Collectors.toList());
+            return new ProductResponse(product, isDisabled, paymentStatus);
+        }).collect(Collectors.toList());
 
         return ResponseEntity.ok(productResponses);
     }
 
     @GetMapping("/product-count")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<Integer> getProductCount(
-            @RequestParam(value = "phoneNumber") String phoneNumber) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<Integer> getProductCount(@RequestParam(value = "phoneNumber") String phoneNumber) {
 
         // Retrieve user by phone number
-        UserInfoEntity user = userInfoRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new EntityNotFoundException("User not found with phone number: " + phoneNumber));
+        UserInfoEntity user = userInfoRepository.findByPhoneNumber(phoneNumber).orElseThrow(() -> new EntityNotFoundException("User not found with phone number: " + phoneNumber));
 
         // Count products owned by the user
         long count = productRepository.countByUserId(user.getId()); // Assuming you have a method to count products by user ID
@@ -171,28 +180,8 @@ public class ProductController {
         }
     }
 
-
-    public static class AuthResponse {
-        private List<ProductEntity> products;
-        private String message;
-
-        public AuthResponse(List<ProductEntity> products, String message) {
-            this.products = products;
-            this.message = message;
-        }
-
-        public List<ProductEntity> getProducts() {
-            return products;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-    }
-
-
     @GetMapping("/list")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public List<ProductEntity> getAllProducts() {
         List<ProductEntity> listOfProducts = productRepository.findAll();
@@ -203,8 +192,7 @@ public class ProductController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_USER')")
     public ResponseEntity<ProductEntity> getProductById(@PathVariable Integer id) {
-        return productRepository.findById(id).map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return productRepository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/user-list")
@@ -212,12 +200,23 @@ public class ProductController {
     public List<ProductEntity> getProductsForUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName(); // Assuming username is used as identifier
-        UserInfoEntity user = userInfoRepository.findByName(username).orElseThrow(() ->
-                new UsernameNotFoundException("User not found"));
+        UserInfoEntity user = userInfoRepository.findByName(username).orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         List<ProductEntity> listOfProducts = productRepository.findByUserId(user.getId());
         return listOfProducts.stream().sorted(Comparator.comparing(ProductEntity::getCreatedAt)) // Ascending order
                 .collect(Collectors.toList());
+    }
+
+    @PostMapping("/save/add")
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<ProductResponseDTO> addProduct(@ModelAttribute ProductDTO productDTO) {
+        try {
+            ProductEntity savedProduct = service.addProduct(productDTO);
+            ProductResponseDTO responseDTO = convertToResponseDTO(savedProduct);
+            return ResponseEntity.ok(responseDTO);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
 //    @PostMapping("/save/add")
@@ -245,27 +244,43 @@ public class ProductController {
 //            product.setCreatedAt(new Date());
 //            ProductEntity savedProduct = service.addProduct(product, file, phoneNumber);
 //            return ResponseEntity.ok(savedProduct);
+
 //        } catch (IOException e) {
 //            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
 //        }
 //    }
 
-    @PostMapping("/save/add")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<ProductResponseDTO> addProduct(@ModelAttribute ProductDTO productDTO) {
-        try {
-            ProductEntity savedProduct = service.addProduct(productDTO);
-            ProductResponseDTO responseDTO = convertToResponseDTO(savedProduct);
-            return ResponseEntity.ok(responseDTO);
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
-    }
-
     private ProductResponseDTO convertToResponseDTO(ProductEntity product) {
         ProductResponseDTO responseDTO = new ProductResponseDTO();
         BeanUtils.copyProperties(product, responseDTO);
         return responseDTO;
+    }
+
+    @PostMapping("/excel/upload")
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<String> uploadProducts(@RequestParam("file") MultipartFile file, @RequestParam(value = "images", required = false) List<MultipartFile> images) {
+        try {
+            List<ProductDTO> products = service.parseExcelFile(file.getInputStream());
+
+            // Validate if the number of images matches the number of products
+            if (images != null && images.size() != products.size()) {
+                return ResponseEntity.badRequest().body("Number of images must match the number of products");
+            }
+
+            // Map images to products
+            for (int i = 0; i < products.size(); i++) {
+                ProductDTO productDTO = products.get(i);
+                if (images != null && i < images.size()) {
+                    productDTO.setImageData(images.get(i));
+                }
+                service.addProduct(productDTO);
+            }
+
+            return ResponseEntity.ok("Products uploaded successfully");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload products");
+        }
     }
 
 
@@ -333,36 +348,6 @@ public class ProductController {
 //        }
 //    }
 
-    @PostMapping("/excel/upload")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<String> uploadProducts(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "images", required = false) List<MultipartFile> images) {
-        try {
-            List<ProductDTO> products = service.parseExcelFile(file.getInputStream());
-
-            // Validate if the number of images matches the number of products
-            if (images != null && images.size() != products.size()) {
-                return ResponseEntity.badRequest().body("Number of images must match the number of products");
-            }
-
-            // Map images to products
-            for (int i = 0; i < products.size(); i++) {
-                ProductDTO productDTO = products.get(i);
-                if (images != null && i < images.size()) {
-                    productDTO.setImageData(images.get(i));
-                }
-                service.addProduct(productDTO);
-            }
-
-            return ResponseEntity.ok("Products uploaded successfully");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to upload products");
-        }
-    }
-
-
     private String getCellValueAsString(Cell cell) {
         if (cell == null) {
             return "";
@@ -383,24 +368,29 @@ public class ProductController {
         }
     }
 
-
     @GetMapping("/detailed")
     public ResponseEntity<DetailedProductsResponse> getDetailedProducts() {
         DetailedProductsResponse response = service.getDetailedProducts();
         return ResponseEntity.ok(response);
     }
 
-//    @PostMapping("/update-product")
+    @PostMapping("/update-product")
+    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<ProductResponseDTO> updateProductDetails(@ModelAttribute ProductDTO productDTO) {
+        try {
+            ProductEntity updatedProduct = service.updateProductDetails(productDTO);
+            ProductResponseDTO responseDTO = convertToResponseDTO(updatedProduct);
+            return ResponseEntity.ok(responseDTO);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @DeleteMapping("/delete")
 //    @CrossOrigin(origins = "http://localhost:4200")
-//    public ResponseEntity<ProductResponseDTO> updateProductDetails(@ModelAttribute ProductDTO productDTO) {
-//        try {
-//            ProductEntity updatedProduct = service.updateProductDetails(productDTO);
-//            ProductResponseDTO responseDTO = convertToResponseDTO(updatedProduct);
-//            return ResponseEntity.ok(responseDTO);
-//        } catch (IOException e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-//        }
-//    }
+    public void deleteProduct(@RequestParam Integer productId) {
+        productRepository.deleteById(productId);
+    }
 
 //    private ProductResponseDTO convertToResponseDTO(ProductEntity product) {
 //        ProductResponseDTO responseDTO = new ProductResponseDTO();
@@ -412,25 +402,16 @@ public class ProductController {
 //        return responseDTO;
 //    }
 
-    @DeleteMapping("/delete")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public void deleteProduct(@RequestParam Integer productId) {
-        productRepository.deleteById(productId);
-    }
-
     @PostMapping("/authenticate")
-    @CrossOrigin(origins = "http://localhost:4200")
-    public ResponseEntity<?> authenticateAndGetToken(@RequestParam String phoneNumber,
-                                                     @RequestParam String password,
-                                                     HttpServletRequest request) {
+//    @CrossOrigin(origins = "http://localhost:4200")
+    public ResponseEntity<?> authenticateAndGetToken(@RequestParam String phoneNumber, @RequestParam String password, HttpServletRequest request) {
 
         Optional<UserInfoEntity> userInfoOptional = userInfoRepository.findByPhoneNumber(phoneNumber);
         if (!userInfoOptional.isPresent()) {
             throw new UsernameNotFoundException("User not found");
         }
         UserInfoEntity userInfo = userInfoOptional.get();
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(userInfo.getName(), password));
+        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(userInfo.getName(), password));
         if (authentication.isAuthenticated()) {
             // Update login times
             LocalDateTime previousLoginTime = userInfo.getLastLogin();
@@ -444,8 +425,7 @@ public class ProductController {
             String username = userInfo.getName();
             String role = userInfo.getRoles();
 //            String phoneNumber =userInfo.getPhoneNumber();
-            AuthenticationResponse response =
-                    new AuthenticationResponse(token, previousLoginTime, username, phoneNumber, role);
+            AuthenticationResponse response = new AuthenticationResponse(token, previousLoginTime, username, phoneNumber, role);
             return ResponseEntity.ok(response);
         } else {
             throw new UsernameNotFoundException("Invalid User Request!");
@@ -453,7 +433,7 @@ public class ProductController {
     }
 
     @GetMapping("/image-upload")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<?> getImage(@RequestParam Integer productId) {
         Optional<ProductEntity> productOptional = productRepository.findById(productId);
         if (productOptional.isPresent()) {
@@ -472,7 +452,7 @@ public class ProductController {
     }
 
     @PostMapping("/video/upload")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<String> uploadVideo(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("No file was uploaded.");
@@ -506,7 +486,7 @@ public class ProductController {
     }
 
     @GetMapping("/video/list")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public void getAllVideos(HttpServletResponse response) {
         try {
             List<VideoData> videos = videoRepository.findAll();
@@ -525,6 +505,48 @@ public class ProductController {
         }
     }
 
+    @PostMapping("/csvTojson")
+    public ResponseEntity<String> convertCsvToJson(
+            @RequestParam(value = "file", required = true) MultipartFile file) {
+        try (CSVReader csvReader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
+            List<String[]> records = csvReader.readAll();
+            if (records.isEmpty() || records == null) {
+                return ResponseEntity.badRequest().body("CSV file is empty.");
+            }
+
+            String[] header = records.get(0);
+            List<Map<String, String>> jsonList = records.stream()
+                    .skip(1)
+                    .map(row -> IntStream.range(0, header.length)
+                            .boxed().collect(Collectors.toMap(i -> header[i], i -> row[i])))
+                    .collect(Collectors.toList());
+            // Convert list to JSON string
+            String jsonResponse = new ObjectMapper().writeValueAsString(jsonList);
+            return ResponseEntity.ok(jsonResponse);
+
+        } catch (IOException | CsvException e) {
+            return ResponseEntity.status(500).body("Error processing CSV file: " + e.getMessage());
+        }
+    }
+
+
+    public static class AuthResponse {
+        private final List<ProductEntity> products;
+        private final String message;
+
+        public AuthResponse(List<ProductEntity> products, String message) {
+            this.products = products;
+            this.message = message;
+        }
+
+        public List<ProductEntity> getProducts() {
+            return products;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+    }
 }
 
 

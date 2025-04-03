@@ -24,15 +24,14 @@ public class NewsController {
         return ResponseEntity.ok(newsResponse);
     }
 
-
     @GetMapping("/all")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public List<Country> getAllCountries() {
         return newsService.getAllCountries();
     }
 
     @GetMapping("/search")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<Country> searchCountry(@RequestParam String name) {
         Optional<Country> country = newsService.getAllCountries()
                 .stream().filter(c -> c.getName().getCommon().equalsIgnoreCase(name)).findFirst();

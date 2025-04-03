@@ -79,7 +79,7 @@ public class CartSerice {
                 e.printStackTrace();
             }
 //            File pdfInvoice = emailService.generateInvoicePdf(cartEntity);
-//            emailService.sendEmailWithAttachment(recipientEmail, cc, bcc, subject, text, imageFile, pdfInvoice);
+            emailService.sendEmailWithAttachment(recipientEmail, cc, bcc, subject, text, imageFile, null);
             if (imageFile != null && imageFile.exists()) {
                 imageFile.delete();
             }

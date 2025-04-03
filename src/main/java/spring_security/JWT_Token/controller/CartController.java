@@ -18,7 +18,7 @@ public class CartController {
     private CartSerice cartSerice;
 
     @PostMapping("/add-cart-items")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<String> addToCart(@RequestParam Integer productId,
                                             @RequestParam String phoneNumber) {
         try {
@@ -29,7 +29,7 @@ public class CartController {
         }
     }
     @GetMapping("/cart-items")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<CartDTO>> getAllCartItems(@RequestParam String phoneNumber) {
         List<CartDTO> list = cartSerice.getAllCartItems(phoneNumber);
         return ResponseEntity.ok(list);
@@ -52,13 +52,13 @@ public class CartController {
 //    }
 
     @GetMapping("/item-count")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<Integer> getAllCount(@RequestParam String phoneNumber) {
         int count = cartSerice.getAllCount(phoneNumber);
         return ResponseEntity.ok(count);
     }
     @DeleteMapping("/cart-delete")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public void deleteCartItem(@RequestParam Integer id) {
         cartSerice.deleteById(id);
     }

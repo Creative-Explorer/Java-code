@@ -19,7 +19,7 @@ public class PaymentController {
     private PaymentService paymentService;
 
     @PostMapping("/process")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public CompletableFuture<ResponseEntity<PaymentResponseDTO>> processPayment(
             @RequestBody PaymentRequestDTO paymentRequestDTO) {
         return paymentService.processPayment(paymentRequestDTO)
@@ -34,14 +34,14 @@ public class PaymentController {
     }
 
     @GetMapping("/{paymentId}/status")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<PaymentStatusDTO> getPaymentStatus(@PathVariable Long paymentId) {
         PaymentStatusDTO statusDTO = paymentService.getPaymentStatus(paymentId);
         return ResponseEntity.ok(statusDTO);
     }
 
     @PostMapping("/refund")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<RefundResponseDTO> processRefund(
             @RequestBody RefundRequestDTO refundRequestDTO) {
         RefundResponseDTO refundResponse = paymentService.processRefund(refundRequestDTO);
@@ -49,7 +49,7 @@ public class PaymentController {
     }
 
     @GetMapping("/history")
-    @CrossOrigin(origins = "http://localhost:4200")
+//    @CrossOrigin(origins = "http://localhost:4200")
     public ResponseEntity<List<PaymentDTO>> getPaymentHistory(
             @RequestParam Long userId) {
         List<PaymentDTO> paymentHistory = paymentService.getPaymentHistory(userId);

@@ -51,7 +51,7 @@ public class SecurityConfig {
                         "/products/delete", "/Users/reset-password",
                         "/products/file-upload","/products/product-count",
                         "/products/image-upload","products/video/upload","products/video/list",
-                        "/products/update-product", "/Users/verifyUser",
+                        "/products/update-product", "/products/tojson","/Users/verifyUser",
                         "/Users/logout", "/Users/user-details",
                         "/carts/add-cart-items", "/carts/add-cart-items",
                         "/carts/cart-items", "/carts/item-count",
@@ -60,10 +60,12 @@ public class SecurityConfig {
                         "/swagger-ui/**","/Users/encryptPassword","/payments/process",
                         "/payments/refund","/payments/history","/api/v1/openai/generate",
                         "/api/v1/voice/convert","/api/v1/news/top-headlines",
-                        "/api/v1/news/all","/api/v1/news/search"
+                        "/api/v1/news/all","/api/v1/news/search","/youtube/videos/category",
+                        "/youtube/videos/trending","/youtube/videos/all"
                         )
                 .permitAll().and().authorizeHttpRequests()
-                .requestMatchers("/products/**","/carts/**","/registration/**","/Users/**","/payments/**")
+                .requestMatchers("/products/**","/carts/**","/registration/**",
+                        "/Users/**","/payments/**","/youtube")
                 .authenticated().and().sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()

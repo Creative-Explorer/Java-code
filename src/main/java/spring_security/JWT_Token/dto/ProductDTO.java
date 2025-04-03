@@ -11,7 +11,7 @@ import org.springframework.web.multipart.MultipartFile;
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ProductDTO {
-//    private int productId;
+    private int productId;
     private String name;
     private Integer qty;
     private Double price;
